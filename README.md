@@ -24,5 +24,4 @@ Perl users have access to the wonderful and comprehensive [Tickit](https://metac
 * use this to create a Logo Editor
 * Use concepts learnt to create a Perl IDE for the console
 * Use this IDE to create other Console applications.
-
-* 
+ 
