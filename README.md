@@ -20,7 +20,7 @@ Perl users have access to the wonderful and comprehensive [Tickit](https://metac
 * Key capture using Term::ReadKey
 * Console drawing using Term::Graille
 * Develop Term::Graille::Interact,  Term::Graille::Menu,  Term::Graille::Selector,  Term::Graille::Dialog
-* Develop a text editor not dissimilar in concept to ped by daansystems
+* Develop a text editor not dissimilar in concept to [ped](https://github.com/daansystems/ped) by [daansystems](https://www.daansystems.com/)
 * use this to create a Logo Editor
 * Use concepts learnt to create a Perl IDE for the console
 * Use this IDE to create other Console applications.
