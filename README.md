@@ -9,7 +9,7 @@ Perl users have access to the wonderful and comprehensive [Tickit](https://metac
 
 * A(nother) console based code/text editor.
 * Written in Pure Perl, with very few dependencies. (ANSI compatible terminal based so no other graphical libraries)
-* Using familiar interface concepts such as hierarchical menus, edit editing panels, file selectors and dialog boxes.
+* Using familiar interface concepts such as hierarchical menus, text editing panels, grphical drawing surfaces, file selectors and dialog boxes.
 * Along with the infrastructure to create other interactive applications
 * With the primary objective being Simplicity.
 * The secret final goal is to be the development for the eventually to be released PerlayStation Games Console.  A games console/terminal that runs on Terminals, written in Perl.  Games could be graphical or text based, mostly pure Perl.  Graille offers pseudo pixel graphics, which can be easily mixed with text.  
