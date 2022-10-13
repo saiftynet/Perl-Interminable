@@ -38,7 +38,7 @@ our $VERSION="0.10";
 use utf8;
 use open ":std", ":encoding(UTF-8)";
 use base 'Exporter';
-our @EXPORT_OK = qw/colour paint printAt clearScreen border blockBlit block2braille pixelAt cursorAt/;
+our @EXPORT_OK = qw/colour paint printAt clearScreen border blockBlit block2braille pixelAt cursorAt wrapText/;
 use Algorithm::Line::Bresenham 0.15;
 use Time::HiRes "sleep";
 
@@ -597,6 +597,10 @@ sub logo{
 			$self->{logoVars}->{y}=$self->{height}/2;
 			last;
 		};
+		/^cs/  && do{
+			$self->clear();
+			last;
+		};
 		/^sp/ && do{
 			$self->{logoVars}->{sp}=$pars[0];
 			last
@@ -713,6 +717,33 @@ sub colour{
   my @formats=map {lc $_} split / +/,$fmts;  
   return join "",map {defined $colours{$_}?"\033[$colours{$_}m":""} @formats;
 }
+
+sub wrapText{
+	my ($str,$width)=@_;
+	my @lines=();
+	my $line="";
+	$str=~s/ +/ /gm;
+	$str=~s/\n/ \n /gm;
+	foreach my $word(split / /,$str){
+		if ($word eq "\n"){
+			push @lines,$line;
+			$line="";
+		}
+		elsif (1+length $line.$word > $width){
+			push @lines,$line;
+			$line=$word;
+		}
+		elsif ($line eq "") {
+			$line=$word
+		}
+		else{
+			$line=$line." ".$word
+		}
+	}
+	push @lines,$line;
+	return \@lines;
+}
+
 
 
 # given an 8 bit block of data, produce a braille block
