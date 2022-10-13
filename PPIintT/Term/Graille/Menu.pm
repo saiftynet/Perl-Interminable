@@ -13,7 +13,7 @@ Modal hierarchical Menu system
                  ["Edit","Clear",["Reformat","2x4","4x4"],["Scroll","left","right","up","down"]],
                  "About"],
           redraw=>\&main::refreshScreen,
-          callback=>\&main::menuActions,
+          dispatcher=>\&main::menuActions,
           );
 
 
@@ -52,9 +52,9 @@ visualise structure.
 C<redraw> This is a function that needs to be supplied to redraw the
 application screen. The menu will overwrite parts of the application screen,
 and this function needs to be provided to restore the screen.
-C<callback> The menu does not call any functions, instead returns the
+C<dispatcher> The menu does not call any functions, instead returns the
 leaf string selected.  It is upto the main application to use this string to 
-in a dispatch routine (the callback function supplied)
+in a dispatch routine (the dispatcher function supplied)
 C<pos> Optional. The default position is [2,2], but setting this parameter allows 
 the menu to be placed elsewhere
 C<highlightColour> Optional. The selected item is highlighted default "black on_white"
@@ -70,7 +70,7 @@ sub new{
     bless $self,$class;
     $self->{menu}=$params{menu}//[];
     $self->{redraw}=$params{redraw} if (exists $params{redraw});        # function to redraw application
-    $self->{callback}=$params{callback} if (exists $params{callback});  # function to call after menu item selected 
+    $self->{dispatcher}=$params{dispatcher} if (exists $params{dispatcher});  # function to call after menu item selected 
 	$self->{breadCrumbs}=[0];
 	$self->{pos}=$params{pos}//[2,2];
 	$self->{highlightColour}=$params{highlightColour}//"black on_white";
@@ -161,7 +161,7 @@ sub openItem{# enter submemnu if one exists, or "open" the item;
 	}
     else{
 		$self->{close}->();
-		$self->{callback}->($label) if $self->{callback};
+		$self->{dispatcher}->($label) if $self->{dispatcher};
 	} 		
 }
 

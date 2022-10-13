@@ -70,8 +70,8 @@ sub new{
     $self->{activeObject}=""; # active object
     ($self->{terminalWidth},$self->{terminalHeight},$self->{terminalXPixels},$self->{terminalYPixels})=GetTerminalSize;
     $self->{cursor}=[0,0];
-    $self->{debugCursor}=[20,45];
     $self->{debug}=1;
+    $self->{debugCursor}=[20,45];
     $self->{keyBuffer}="";
     $self->{gV}={}; #contains global variables that are accessible from one object to next
     bless $self,$class;
@@ -94,6 +94,7 @@ sub addObject{
 	my ($objectId,$object,$actions,$trigger)=@params{qw/objectId object actions trigger/};
 	$objectId//=$self->newId();
 	$self->{objects}->{$objectId}=$object;
+	$self->{objects}->{$objectId}->{objectId}//=$objectId;
 	$self->{objects}->{$objectId}->{actions}=$actions//{};
 	$self->{triggers}->{$trigger}=$objectId if $trigger;
 	return $objectId;
@@ -178,7 +179,7 @@ sub run{
 		else{$pressed= ($esc ne "")?$esc:chr($OrdKey);};
 			
 		if ($self->{activeObject} ne ""){   # mode is widget;
-		printAt (@{$self->{debugCursor}},"key pressed=$OrdKey $pressed ".$self->{activeObject}."       ");
+		$self->debugMessage("key pressed=$OrdKey $pressed ".$self->{activeObject}."       ");
 			if (defined $self->{objects}->{$self->{activeObject}}->{keyAction}->{$pressed}){ #  pre defined key actions
 				$self->{objects}->{$self->{activeObject}}->{keyAction}->{$pressed}->($self->{activeObject},$self->{gV});
 			}
@@ -190,16 +191,19 @@ sub run{
 			}
 		}	
 		else {  # if mode is main
-			printAt (@{$self->{debugCursor}},"key pressed=$OrdKey $pressed (MAIN)     ");
+			my $mode="(MAIN)";
 			if (defined $self->{actions}->{$pressed}->{proc}){
 				$self->{actions}->{$pressed}->{proc}->($self->{gV})
 			}
 			elsif(exists $self->{triggers}->{$pressed}){
+			    $mode="($self->{triggers}->{$pressed})";
 				$self->start($self->{triggers}->{$pressed});
 			}
 			else {   # otherwise collect the keys pressed in a buffer
 				$self->{keyBuffer}.=$pressed;
 			}
+			
+			$self->debugMessage("key pressed=$OrdKey $pressed $mode  ");
 		}
 	  }
 	  
@@ -207,6 +211,11 @@ sub run{
   }  
   ReadMode 'normal';  
 }  
+
+sub debugMessage{
+	my ($self,$msg)=@_;
+	printAt (@{$self->{debugCursor}},$msg) if ($self->{debug})
+}
 
 sub get_escape_sequence {
     my $esc;
@@ -230,13 +239,13 @@ sub start{
 	$self->{activeObject}=$objectId;
 	$self->{objects}->{$objectId}->{params}=$params;
 	my $closer=sub{$self->close()};
-	$self->{objects}->{$objectId}->{close}=$closer;
+	$self->{objects}->{$objectId}->{close}=$closer;   # closer function to object
 	$self->{objects}->{$objectId}->draw();
 }
 
 sub close{
 	my ($self)=@_;
-	$self->{objects}->{$self->{activeObject}}->close() 
+	$self->{objects}->{$self->{activeObject}}->close() # if the object has own close function
 	    if ( $self->{objects}->{$self->{activeObject}} && $self->{objects}->{$self->{activeObject}}->can("close"));
 	delete $self->{objects}->{$self->{activeObject}} if ($self->{objects}->{$self->{activeObject}}->{transient});
 	$self->{activeObject}="";

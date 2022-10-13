@@ -16,7 +16,7 @@ Text editting area
 
 =head1 DESCRIPTION
 
-Allows an area for multiline text to be entered
+Allows an area for multiline text to be entered and editted.
 
 =head1 FUNCTIONS
 
@@ -25,7 +25,7 @@ Allows an area for multiline text to be entered
 package  Term::Graille::Textarea;
 use lib "../lib";
 use strict;use warnings;
-use Term::Graille qw/colour printAt clearScreen/;
+use Term::Graille qw/colour printAt clearScreen border/;
 use utf8;
 
 =head3 C<my $menu=Term::Graille::Menu-E<gt>new(%params)>
@@ -53,8 +53,8 @@ sub new{
     my ($class,%params) = @_;  
     my $self={};
     bless $self,$class;
-    $self->{geometry}=$params{geometry}//[70,14];
-    $self->{position}=$params{position}//[4,6];        # function to redraw application
+    $self->{geometry}=$params{geometry}//[72,14];  # to do fugure out resize
+    $self->{position}=$params{position}//[4,6];    # function to redraw application
     $self->{cursor}=[0,0],
 	$self->{text}=$params{text}//[""];
 	$self->{windowStart}=$params{windowStart}//0;
@@ -65,11 +65,17 @@ sub new{
 		"[C"       =>sub{$self->rightArrow()},
 		"[D"       =>sub{$self->leftArrow()},
 		"enter"    =>sub{$self->newline()},
-		"esc"      =>sub{$self->exit()},
+		"esc"      =>sub{$self->exit()},          # this required for all interaction objects
 		"delete"   =>sub{$self->deleteChar()},
 		"backspace"=>sub{$self->backspace()},
 		others =>sub{my ($obj,$pressed,$gV)=@_;$self->addChar($pressed)},
 	};
+	
+	$self->{border}=$params{border}//{style=>"double"};
+	$self->{title}=$params{title}//"Text area";
+
+	
+	
 	return $self;
 }
 
@@ -80,15 +86,22 @@ sub cursorMove{
 	$self->{cursor}->[0]=0 if $self->{cursor}->[0] <0;
 	$self->{cursor}->[0]=$#{$self->{text}} if ($#{$self->{text}} < $self->{cursor}->[0]);
 	$self->{cursor}->[1]=0 if $self->{cursor}->[1] <0;
-	$self->{cursor}->[1]=(length $self->{text}->[$self->{cursor}->[0]]) if ((length $self->{text}->[$self->{cursor}->[0]])-1 < $self->{cursor}->[1]);
+	$self->{cursor}->[1]=(length $self->{text}->[$self->{cursor}->[0]]) if ((length $self->{text}->[$self->{cursor}->[0]]) < $self->{cursor}->[1]);
 	$self->{windowStart} = $self->{cursor}->[0] if ($self->{cursor}->[0] < $self->{windowStart});
 	$self->{windowStart} = $self->{cursor}->[0]-$self->{geometry}->[1] if ($self->{cursor}->[0]-$self->{geometry}->[1] > $self->{windowStart});
 	$self->draw();
-	printAt($self->{position}->[0]+$self->{geometry}->[1]+1,$self->{position}->[1]+$self->{geometry}->[0]-10," $self->{cursor}->[0],$self->{cursor}->[1] ". $self->charAt()." ");
+	my $winEnd=$self->{windowStart}+$self->{geometry}->[1];
+	if (@{$self->{text}}<$winEnd){$winEnd=@{$self->{text}}} ;
+	printAt($self->{position}->[0]+$self->{geometry}->[1]+1,$self->{position}->[1]+$self->{geometry}->[0]-50,
+	           " Lines: $self->{windowStart}-$winEnd/".@{$self->{text}}." Curs: $self->{cursor}->[0],$self->{cursor}->[1] ". $self->charAt()." ");
 }
 
 sub draw{
 	my ($self)=@_;
+	
+	border($self->{position}->[0]-1,$self->{position}->[1]-1,
+	       $self->{position}->[0]+$self->{geometry}->[1],$self->{position}->[1]+$self->{geometry}->[0],
+	       $self->{border}->{style}//"double",$self->{border}->{colour}//"white",$self->{title},$self->{titleColour}//"white") if $self->{border};
 	for my $l ($self->{windowStart}..$self->{windowStart}+$self->{geometry}->[1]){
 	    $self->drawLine($l)
 	}
@@ -99,13 +112,19 @@ sub drawLine{
 	my ($row,$col)=@{$self->{position}}; # the position of the top left corner of textarea
 	my $rowOffset=$row+$line-$self->{windowStart};
 	my $lineText=$self->{text}->[$line]//"";
-	printAt($rowOffset,$col," "x$self->{geometry}->[0]);
+	my $rowScroll=$self->{cursor}->[1]-$self->{geometry}->[0];
+	$rowScroll=0 if ($rowScroll<0);
+	$lineText=(length $lineText > $rowScroll) ? substr($lineText,$rowScroll,($self->{geometry}->[0]+1)):"";
+	printAt($rowOffset,$col," "x($self->{geometry}->[0]+1));
 	if ($line!=$self->{cursor}->[0]){
-		 printAt($rowOffset,$col,$lineText." ");
+		 printAt($rowOffset,$col,$lineText);
 	}
 	else {
-		if (length $lineText==$self->{cursor}->[1]){  printAt($rowOffset,$col,$lineText.colour("blink invert")." ".colour("reset")) }
-		else {substr ($lineText, $self->{cursor}->[1]+1, 0)= colour("reset");substr ($lineText,  $self->{cursor}->[1], 0)= colour("blink invert") ;
+		# empty line= just blink character
+		if (length $lineText<=1){ printAt($rowOffset,$col,colour("blink invert")." ".colour("reset"))}
+		# end of line= line+blinkcharacter
+		elsif (length $lineText==($self->{cursor}->[1]-$rowScroll)){  printAt($rowOffset,$col,$lineText.colour("blink invert")." ".colour("reset")) }
+		else {substr ($lineText, $self->{cursor}->[1]+1-$rowScroll, 0)= colour("reset");substr ($lineText,  $self->{cursor}->[1]-$rowScroll, 0)= colour("blink invert") ;
 			 printAt($rowOffset,$col,$lineText);
 			};
 	}
@@ -158,9 +177,10 @@ sub newline{
 
 sub addChar{
 	my ($self,$ch)=@_;
-	return unless defined $ch;
+	return unless defined $ch && (length $ch==1);
 	my $line=$self->{text}->[$self->{cursor}->[0]]//"";
-	substr($line, $self->{cursor}->[1], 0)=$ch;
+	if ($line){	substr($line, $self->{cursor}->[1], 0)=$ch;}
+	else{ $line=$ch};
 	$self->{text}->[$self->{cursor}->[0]]=$line;
 	$self->cursorMove([0,1]);
 	
@@ -168,9 +188,15 @@ sub addChar{
 
 sub deleteChar{
 	my ($self)=@_;
+	# delete character if not end of line
 	if ($self->{cursor}->[1]<((length $self->{text}->[$self->{cursor}->[0]])-1)){
 		substr($self->{text}->[$self->{cursor}->[0]], $self->{cursor}->[1],1)="";
 	}
+	# skip if no more lines at all
+	elsif ($self->{cursor}->[0] == @{$self->{text}}-1){
+		
+	}
+	#get the next line  and merge it with current line
 	else{
 		$self->{text}->[$self->{cursor}->[0]].= $self->{text}->[$self->{cursor}->[0]+1];
         splice(  @{$self->{text}}, $self->{cursor}->[0]+1, 1 );

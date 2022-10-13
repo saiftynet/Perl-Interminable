@@ -30,10 +30,12 @@ sub new{
     $self->{options}=$params{options}//[];
     $self->{redraw}=$params{redraw} if (exists $params{redraw});        # function to redraw application
     $self->{callback}=$params{callback} if (exists $params{callback});  # function to call after menu item selected 
-	$self->{selected}=$params{selected}//  $self->{options}->[0];
+	$self->{selected}=$params{selected}//  "";
+	$self->{combo}=$params{combo}// 1;                 # combo mode...experimental
+	$self->{entry}=$params{selected}//  "";
+	$self->{entryPos}=0;
 	$self->{pointer}=0;
 	$self->{start}=$params{start}//0;
-	$self->{ioMode}="chooser";
 	$self->{title}=$params{title}//"Chooser";
 	$self->{normalColour}=$params{titleColour}//"yellow";
 	$self->{multi}=$params{multi}//0;
@@ -44,9 +46,10 @@ sub new{
 	$self->{keyAction}={
 		"[A"   =>sub{$self->prevItem()},
 		"[B"   =>sub{$self->nextItem()},
-		"[C"   =>sub{$self->selectItem()},
-		"enter"=>sub{$self->selectItem()},
+		"[C"   =>sub{$self->selectItem(1)},
+		"enter"=>sub{$self->selectItem(2)},
 		"esc"  =>sub{$self->{close}->()},
+		others =>sub{my ($obj,$pressed,$gV)=@_;$self->addChar($pressed)},
 	};
 	return $self;
 }
@@ -57,16 +60,28 @@ sub draw{
 	       $self->{pos}->[0]+$self->{geometry}->[0],$self->{pos}->[1]+$self->{geometry}->[1],
 	       "thick",$self->{focus}?$self->{focusColour}:$self->{blurColour},
 	       $self->{title},$self->{titleColour});
-	$self->{start}++ while ($self->{pointer}>$self->{start}+$self->{geometry}->[0]-1);
+
+	$self->{start}++ while ($self->{pointer}>$self->{start}+$self->{geometry}->[0]-4); # the -4  user entry space for combo mode
 	$self->{start}-- while ($self->{pointer}<$self->{start});
+	printAt($self->{pos}->[0]+1,$self->{pos}->[1]+1, $self->{entry}.(" "x($self->{geometry}->[1]-length $self->{entry})));  # combo mode input linethe 
+	printAt($self->{pos}->[0]+2,$self->{pos}->[1]+1, "-"x$self->{geometry}->[1]);   # lower border for user entry space for combo mode
+
 	foreach ($self->{start}..$self->{start}+$self->{geometry}->[0]-1){ 
 		if ($_<@{$self->{options}}){		
 			my $colour=colour(isSelected($self,$self->{options}->[$_])?"black on_white":"white");
 			$colour.=colour(($_==$self->{pointer})?"underline":"");
-			printAt($self->{pos}->[0]+$_+1-$self->{start},$self->{pos}->[1]+1,
+			printAt($self->{pos}->[0]+$_+3-$self->{start},$self->{pos}->[1]+1,  #+3 is for user entry space for combo mode
 			        $colour.$self->{options}->[$_].colour("reset"));
 		}
 	}
+}
+
+sub addChar{
+	 my ($self,$ch)=@_;
+	 $self->{entry}.=$ch if (length $ch ==1 );
+	 chop $self->{entry}if ($ch =~/back/ );
+	 $self->draw();
+	 
 }
 
 sub setSelected{
@@ -109,17 +124,15 @@ sub prevItem{
 sub selectItem{
 	my ($self,@otherStuff)=@_;
 	if ($self->{multi}==0){
-		$self->{selected}=[$self->{options}->[$self->{pointer}]];
+		$self->{selected}=($self->{entry} and ($otherStuff[0] == 2))?$self->{entry}:$self->{options}->[$self->{pointer}];
 		$self->{redraw}->();
-		$self->{callback}->($self->{options}->[$self->{pointer}],@otherStuff) if $self->{callback};
+		$self->{callback}->($self->{selected},@otherStuff) if $self->{callback};
 		return $self->{options}->[$self->{pointer}];
 	}
 	else{
 		#for multiselect
 	}
 }
-
-
 
 sub close{  # what needs to be done before Interact de-activates widget
 	my ($self)=@_;
