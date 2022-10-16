@@ -5,6 +5,8 @@ Perl IDEs written in Perl include Pardre and perhaps others.  Many other IDEs ex
 
 Perl users have access to the wonderful and comprehensive [Tickit](https://metacpan.org/dist/Tickit) libraries by [Paul Evans](https://metacpan.org/author/PEVANS). This is sophisticated and powerful and would be the ideal starting for any sensible and competent programmer keen of develiping a console based editor for Perl.  Equally sensible ones might ALSO opt for [Curses](https://metacpan.org/pod/Curses).  But others, not so sensible coders might choose to help brewing a PPiinTt (short for Pure Perl Ide In The Terminal). If you think you are seeing double, this is the desired effect of consuming such beerbrained ideas.
 
+![Interminable](https://user-images.githubusercontent.com/34284663/196046482-8f3ef3f8-dfca-4a6b-9568-ea80a8ae3245.gif)
+
 ## Goals
 
 * A(nother) console based code/text editor.
